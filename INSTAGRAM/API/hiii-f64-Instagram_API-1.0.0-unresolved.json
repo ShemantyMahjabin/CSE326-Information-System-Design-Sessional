@@ -1,0 +1,1930 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "Instagram API",
+    "description" : "",
+    "version" : "1.0.0"
+  },
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/hiii-f64/Instagram_API/1.0.0"
+  }, {
+    "url" : "https://api.instagram-clone.com/v1",
+    "description" : "Production"
+  } ],
+  "security" : [ {
+    "BearerAuth" : [ ]
+  } ],
+  "tags" : [ {
+    "name" : "Feed",
+    "description" : "Load and refresh the home feed"
+  }, {
+    "name" : "Media",
+    "description" : "Upload image or video files"
+  }, {
+    "name" : "Posts",
+    "description" : "Create, publish, edit, and manage posts"
+  }, {
+    "name" : "Friend Suggestions",
+    "description" : "Suggest, follow, dismiss, and list friend recommendations"
+  } ],
+  "paths" : {
+    "/feed" : {
+      "get" : {
+        "tags" : [ "Feed" ],
+        "summary" : "Get the home feed",
+        "operationId" : "getFeed",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "default" : 1
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "default" : 12,
+            "maximum" : 50
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Feed loaded successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FeedResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/feed/refresh" : {
+      "post" : {
+        "tags" : [ "Feed" ],
+        "summary" : "Refresh the feed",
+        "operationId" : "refreshFeed",
+        "responses" : {
+          "200" : {
+            "description" : "Fresh feed returned.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FeedResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/media/upload" : {
+      "post" : {
+        "tags" : [ "Media" ],
+        "summary" : "Upload an image or video",
+        "description" : "Upload a single image or video file to the server.\nReturns a `media_id` to reference when creating a post.\n\nFor carousel posts, call this endpoint once per file (2–10 times)\nand collect all `media_id` values before creating the post.\n",
+        "operationId" : "uploadMedia",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "file", "media_type" ],
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary",
+                    "description" : "The image or video file to upload."
+                  },
+                  "media_type" : {
+                    "type" : "string",
+                    "enum" : [ "IMAGE", "VIDEO" ],
+                    "description" : "Type of the file being uploaded.",
+                    "example" : "IMAGE"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "File uploaded successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MediaUploadResponse"
+                },
+                "examples" : {
+                  "image" : {
+                    "summary" : "Image uploaded",
+                    "value" : {
+                      "media_id" : "med_7kTp3nRw9X",
+                      "media_type" : "IMAGE",
+                      "preview_url" : "https://cdn.instagram-clone.com/staged/med_7kTp3nRw9X.jpg",
+                      "width" : 1080,
+                      "height" : 1080
+                    }
+                  },
+                  "video" : {
+                    "summary" : "Video uploaded (processing)",
+                    "value" : {
+                      "media_id" : "med_9vWz5pNm6C",
+                      "media_type" : "VIDEO",
+                      "preview_url" : null,
+                      "width" : 1080,
+                      "height" : 1920
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "413" : {
+            "description" : "File exceeds maximum allowed size.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "error" : {
+                    "code" : "file_too_large",
+                    "message" : "File size 12 MB exceeds the 8 MB limit for IMAGE uploads."
+                  }
+                }
+              }
+            }
+          },
+          "415" : {
+            "description" : "Unsupported file format.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "error" : {
+                    "code" : "unsupported_format",
+                    "message" : "Format 'image/gif' is not supported. Use JPEG or PNG for images."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/{media_id}/edit" : {
+      "post" : {
+        "tags" : [ "Media" ],
+        "summary" : "Apply edits to uploaded media",
+        "description" : "Apply edits to a previously uploaded media file before creating a post.\nReturns a new `media_id` pointing to the processed file.\n",
+        "operationId" : "editMedia",
+        "parameters" : [ {
+          "name" : "media_id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "med_7kTp3nRw9X"
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "crop" : {
+                    "type" : "object",
+                    "description" : "Crop dimensions as normalized values (0.0–1.0).",
+                    "properties" : {
+                      "x" : {
+                        "type" : "number",
+                        "format" : "float",
+                        "example" : 0.1
+                      },
+                      "y" : {
+                        "type" : "number",
+                        "format" : "float",
+                        "example" : 0.1
+                      },
+                      "width" : {
+                        "type" : "number",
+                        "format" : "float",
+                        "example" : 0.8
+                      },
+                      "height" : {
+                        "type" : "number",
+                        "format" : "float",
+                        "example" : 0.8
+                      }
+                    }
+                  },
+                  "rotate" : {
+                    "type" : "integer",
+                    "enum" : [ 0, 90, 180, 270 ],
+                    "description" : "Clockwise rotation in degrees.",
+                    "example" : 90
+                  },
+                  "adjustments" : {
+                    "type" : "object",
+                    "description" : "Pixel-level adjustments. All values range from -100 to 100, default 0.",
+                    "properties" : {
+                      "brightness" : {
+                        "type" : "integer",
+                        "example" : 20
+                      },
+                      "contrast" : {
+                        "type" : "integer",
+                        "example" : 10
+                      },
+                      "saturation" : {
+                        "type" : "integer",
+                        "example" : -15
+                      },
+                      "sharpness" : {
+                        "type" : "integer",
+                        "example" : 10
+                      }
+                    }
+                  },
+                  "filter" : {
+                    "type" : "string",
+                    "nullable" : true,
+                    "enum" : [ "NONE", "CLARENDON", "GINGHAM", "MOON", "LARK", "REYES", "JUNO", "SLUMBER", "CREMA", "LUDWIG", "ADEN", "PERPETUA" ],
+                    "description" : "Preset filter to apply. Set to `NONE` to remove filter.",
+                    "example" : "CLARENDON"
+                  }
+                }
+              },
+              "examples" : {
+                "crop_only" : {
+                  "summary" : "Crop only",
+                  "value" : {
+                    "crop" : {
+                      "x" : 0.1,
+                      "y" : 0.1,
+                      "width" : 0.8,
+                      "height" : 0.8
+                    }
+                  }
+                },
+                "filter_only" : {
+                  "summary" : "Apply filter only",
+                  "value" : {
+                    "filter" : "CLARENDON"
+                  }
+                },
+                "brightness_adjust" : {
+                  "summary" : "Brightness and contrast only",
+                  "value" : {
+                    "adjustments" : {
+                      "brightness" : 20,
+                      "contrast" : 10
+                    }
+                  }
+                },
+                "full_edit" : {
+                  "summary" : "Full edit",
+                  "value" : {
+                    "crop" : {
+                      "x" : 0.0,
+                      "y" : 0.1,
+                      "width" : 1.0,
+                      "height" : 0.8
+                    },
+                    "rotate" : 0,
+                    "adjustments" : {
+                      "brightness" : 15,
+                      "contrast" : 5,
+                      "saturation" : -10,
+                      "sharpness" : 10
+                    },
+                    "filter" : "LARK"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Edits applied successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MediaUploadResponse"
+                },
+                "example" : {
+                  "media_id" : "med_4rXk2mNp8Q",
+                  "media_type" : "IMAGE",
+                  "preview_url" : "https://cdn.instagram-clone.com/staged/med_4rXk2mNp8Q.jpg",
+                  "width" : 1080,
+                  "height" : 1080
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/posts" : {
+      "post" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Create a post",
+        "description" : "Create a new post using one or more uploaded `media_id` values.\n",
+        "operationId" : "createPost",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "CreatePostRequest" : {
+                  "type" : "object",
+                  "required" : [ "media_ids", "status" ],
+                  "properties" : {
+                    "media_ids" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "minItems" : 1,
+                      "maxItems" : 10,
+                      "description" : "Ordered list of `media_id` values from the upload step.\n",
+                      "example" : [ "med_7kTp3nRw9X" ]
+                    },
+                    "caption" : {
+                      "type" : "string",
+                      "maxLength" : 2200,
+                      "description" : "Post caption. Supports `#hashtags` and `@mentions`.",
+                      "example" : "Golden hour \uD83C\uDF05 #sunset #travel"
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "enum" : [ "PUBLISHED", "DRAFT" ],
+                      "description" : "`PUBLISHED` to post immediately. `DRAFT` to save without publishing.",
+                      "example" : "PUBLISHED"
+                    },
+                    "disable_comments" : {
+                      "type" : "boolean",
+                      "default" : false,
+                      "description" : "Prevent other users from commenting on this post."
+                    }
+                  }
+                }
+              },
+              "examples" : {
+                "single_image" : {
+                  "summary" : "Single image — publish now",
+                  "value" : {
+                    "media_ids" : [ "med_7kTp3nRw9X" ],
+                    "caption" : "Golden hour \uD83C\uDF05 #sunset #travel",
+                    "status" : "PUBLISHED"
+                  }
+                },
+                "carousel" : {
+                  "summary" : "Carousel — publish now",
+                  "value" : {
+                    "media_ids" : [ "med_1aJx7kPq2Z", "med_2bKy8lQr3A", "med_3cLz9mRs4B" ],
+                    "caption" : "Weekend highlights \uD83C\uDFD6️ #travel #beach",
+                    "status" : "PUBLISHED"
+                  }
+                },
+                "video" : {
+                  "summary" : "Single video — publish now",
+                  "value" : {
+                    "media_ids" : [ "med_9vWz5pNm6C" ],
+                    "caption" : "Morning yoga \uD83E\uDDD8 #wellness",
+                    "status" : "PUBLISHED"
+                  }
+                },
+                "draft" : {
+                  "summary" : "Save as draft",
+                  "value" : {
+                    "media_ids" : [ "med_7kTp3nRw9X" ],
+                    "caption" : "Work in progress...",
+                    "status" : "DRAFT"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Post created successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Post"
+                },
+                "examples" : {
+                  "published" : {
+                    "summary" : "Post published",
+                    "value" : {
+                      "post_id" : "pst_5bLm4nRt1X",
+                      "status" : "PUBLISHED",
+                      "media" : [ {
+                        "media_id" : "med_7kTp3nRw9X",
+                        "media_type" : "IMAGE",
+                        "url" : "https://cdn.instagram-clone.com/posts/med_7kTp3nRw9X.jpg"
+                      } ],
+                      "caption" : "Golden hour \uD83C\uDF05 #sunset #travel",
+                      "like_count" : 0,
+                      "comment_count" : 0,
+                      "permalink" : "https://www.instagram-clone.com/p/pst_5bLm4nRt1X",
+                      "created_at" : "2024-06-15T14:32:00Z"
+                    }
+                  },
+                  "draft" : {
+                    "summary" : "Draft saved",
+                    "value" : {
+                      "post_id" : "pst_8cNp6qSv2Y",
+                      "status" : "DRAFT",
+                      "media" : [ {
+                        "media_id" : "med_7kTp3nRw9X",
+                        "media_type" : "IMAGE",
+                        "url" : "https://cdn.instagram-clone.com/posts/med_7kTp3nRw9X.jpg"
+                      } ],
+                      "caption" : "Work in progress...",
+                      "like_count" : 0,
+                      "comment_count" : 0,
+                      "permalink" : null,
+                      "created_at" : "2024-06-15T14:32:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "422" : {
+            "description" : "Media not found or not yet processed.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "error" : {
+                    "code" : "media_not_ready",
+                    "message" : "Media 'med_9vWz5pNm6C' is still processing. Please try again shortly."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/{post_id}/publish" : {
+      "post" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Publish a draft post",
+        "operationId" : "publishDraft",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Draft published successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Post"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Post is already published.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "error" : {
+                    "code" : "already_published",
+                    "message" : "Post is already published."
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/posts/{post_id}" : {
+      "get" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Get a post by ID",
+        "operationId" : "getPost",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Post details.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Post"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Edit a post",
+        "description" : "Update editable fields of a published or draft post.\n",
+        "operationId" : "editPost",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "minProperties" : 1,
+                "properties" : {
+                  "caption" : {
+                    "type" : "string",
+                    "maxLength" : 2200,
+                    "description" : "Updated caption. Supports `#hashtags` and `@mentions`.",
+                    "example" : "Updated caption ✏️ #edited #travel"
+                  },
+                  "disable_comments" : {
+                    "type" : "boolean",
+                    "description" : "Toggle commenting on or off.",
+                    "example" : true
+                  },
+                  "location" : {
+                    "type" : "object",
+                    "nullable" : true,
+                    "description" : "Tag a location. Set to `null` to remove existing location.",
+                    "properties" : {
+                      "location_id" : {
+                        "type" : "string",
+                        "description" : "ID from the locations search endpoint.",
+                        "example" : "loc_9pQr2sWx4Y"
+                      },
+                      "name" : {
+                        "type" : "string",
+                        "example" : "Bali, Indonesia"
+                      }
+                    }
+                  },
+                  "user_tags" : {
+                    "type" : "array",
+                    "description" : "Tag users in the post image.\nReplaces the full existing list — send an empty array `[]` to remove all tags.\n",
+                    "items" : {
+                      "type" : "object",
+                      "required" : [ "username" ],
+                      "properties" : {
+                        "username" : {
+                          "type" : "string",
+                          "example" : "travel_buddy"
+                        },
+                        "position" : {
+                          "type" : "object",
+                          "description" : "Normalized position on the image (0.0–1.0). Only applies to IMAGE posts.",
+                          "properties" : {
+                            "x" : {
+                              "type" : "number",
+                              "format" : "float",
+                              "minimum" : 0,
+                              "maximum" : 1,
+                              "example" : 0.4
+                            },
+                            "y" : {
+                              "type" : "number",
+                              "format" : "float",
+                              "minimum" : 0,
+                              "maximum" : 1,
+                              "example" : 0.6
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples" : {
+                "update_caption" : {
+                  "summary" : "Update caption only",
+                  "value" : {
+                    "caption" : "Updated caption  #edited #travel"
+                  }
+                },
+                "disable_comments" : {
+                  "summary" : "Turn off comments",
+                  "value" : {
+                    "disable_comments" : true
+                  }
+                },
+                "add_location" : {
+                  "summary" : "Add or change location",
+                  "value" : {
+                    "location" : {
+                      "location_id" : "loc_9pQr2sWx4Y",
+                      "name" : "Bali, Indonesia"
+                    }
+                  }
+                },
+                "tag_users" : {
+                  "summary" : "Tag users in photo",
+                  "value" : {
+                    "user_tags" : [ {
+                      "username" : "travel_buddy",
+                      "position" : {
+                        "x" : 0.4,
+                        "y" : 0.6
+                      }
+                    }, {
+                      "username" : "photographer_jane",
+                      "position" : {
+                        "x" : 0.7,
+                        "y" : 0.3
+                      }
+                    } ]
+                  }
+                },
+                "full_edit" : {
+                  "summary" : "Edit multiple fields at once",
+                  "value" : {
+                    "caption" : "Better caption  #travel",
+                    "disable_comments" : false,
+                    "location" : {
+                      "location_id" : "loc_9pQr2sWx4Y",
+                      "name" : "Bali, Indonesia"
+                    },
+                    "user_tags" : [ {
+                      "username" : "travel_buddy",
+                      "position" : {
+                        "x" : 0.4,
+                        "y" : 0.6
+                      }
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Post updated successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Post"
+                },
+                "example" : {
+                  "post_id" : "pst_5bLm4nRt1X",
+                  "status" : "PUBLISHED",
+                  "caption" : "Updated caption  #edited #travel",
+                  "disable_comments" : true,
+                  "location" : {
+                    "location_id" : "loc_9pQr2sWx4Y",
+                    "name" : "Bali, Indonesia"
+                  },
+                  "user_tags" : [ {
+                    "username" : "travel_buddy",
+                    "position" : {
+                      "x" : 0.4,
+                      "y" : 0.6
+                    }
+                  } ],
+                  "permalink" : "https://www.instagram-clone.com/p/pst_5bLm4nRt1X",
+                  "updated_at" : "2024-06-15T15:00:00Z"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/Forbidden"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "422" : {
+            "description" : "Referenced user or location not found.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "error" : {
+                    "code" : "user_not_found",
+                    "message" : "User 'travel_buddy' does not exist."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/{post_id}/like" : {
+      "post" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Toggle like on a post",
+        "description" : "Toggles a like on the post. If not liked, it likes the post.\nIf already liked, it removes the like.\nReturns updated like_count and is_liked so the frontend can\nupdate the feed UI locally without reloading the feed.\n",
+        "operationId" : "toggleLike",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Like toggled successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "post_id" : {
+                      "type" : "string",
+                      "example" : "pst_5bLm4nRt1X"
+                    },
+                    "is_liked" : {
+                      "type" : "boolean",
+                      "description" : "true if the post is now liked, false if like was removed.",
+                      "example" : true
+                    },
+                    "like_count" : {
+                      "type" : "integer",
+                      "example" : 232
+                    }
+                  }
+                },
+                "examples" : {
+                  "liked" : {
+                    "summary" : "Post liked",
+                    "value" : {
+                      "post_id" : "pst_5bLm4nRt1X",
+                      "is_liked" : true,
+                      "like_count" : 232
+                    }
+                  },
+                  "unliked" : {
+                    "summary" : "Like removed",
+                    "value" : {
+                      "post_id" : "pst_5bLm4nRt1X",
+                      "is_liked" : false,
+                      "like_count" : 231
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/posts/{post_id}/likes" : {
+      "get" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Get users who liked a post",
+        "operationId" : "getPostLikes",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "default" : 1
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "default" : 20,
+            "maximum" : 50
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Likes retrieved successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "post_id" : {
+                      "type" : "string",
+                      "example" : "pst_5bLm4nRt1X"
+                    },
+                    "like_count" : {
+                      "type" : "integer",
+                      "example" : 232
+                    },
+                    "users" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/LikeUser"
+                      }
+                    },
+                    "page" : {
+                      "type" : "integer",
+                      "example" : 1
+                    },
+                    "total_pages" : {
+                      "type" : "integer",
+                      "example" : 3
+                    },
+                    "has_more" : {
+                      "type" : "boolean",
+                      "example" : true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/posts/{post_id}/repost" : {
+      "post" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Toggle repost",
+        "description" : "Toggles a repost on the post. If not reposted, it reposts to the\nlogged-in user's followers. If already reposted, it removes the repost.\nReturns updated repost_count and is_reposted so the frontend can\nupdate the feed UI locally without reloading the feed.\n",
+        "operationId" : "toggleRepost",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "caption" : {
+                    "type" : "string",
+                    "maxLength" : 2200,
+                    "description" : "Optional caption. Ignored when removing a repost.",
+                    "example" : "Had to share this amazing shot!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Repost toggled successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "post_id" : {
+                      "type" : "string",
+                      "example" : "pst_5bLm4nRt1X"
+                    },
+                    "is_reposted" : {
+                      "type" : "boolean",
+                      "description" : "true if now reposted, false if repost was removed.",
+                      "example" : true
+                    },
+                    "repost_count" : {
+                      "type" : "integer",
+                      "example" : 18
+                    }
+                  }
+                },
+                "examples" : {
+                  "reposted" : {
+                    "summary" : "Post reposted",
+                    "value" : {
+                      "post_id" : "pst_5bLm4nRt1X",
+                      "is_reposted" : true,
+                      "repost_count" : 18
+                    }
+                  },
+                  "unreposted" : {
+                    "summary" : "Repost removed",
+                    "value" : {
+                      "post_id" : "pst_5bLm4nRt1X",
+                      "is_reposted" : false,
+                      "repost_count" : 17
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Cannot repost your own post.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "error" : {
+                    "code" : "repost_not_allowed",
+                    "message" : "You cannot repost your own post."
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/posts/{post_id}/comments" : {
+      "get" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Get comments on a post",
+        "operationId" : "getComments",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "default" : 1
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "default" : 20,
+            "maximum" : 50
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Comments retrieved successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "post_id" : {
+                      "type" : "string",
+                      "example" : "pst_5bLm4nRt1X"
+                    },
+                    "comment_count" : {
+                      "type" : "integer",
+                      "example" : 14
+                    },
+                    "comments" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/Comment"
+                      }
+                    },
+                    "page" : {
+                      "type" : "integer",
+                      "example" : 1
+                    },
+                    "total_pages" : {
+                      "type" : "integer",
+                      "example" : 1
+                    },
+                    "has_more" : {
+                      "type" : "boolean",
+                      "example" : false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Add a comment to a post",
+        "operationId" : "createComment",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "text" ],
+                "properties" : {
+                  "text" : {
+                    "type" : "string",
+                    "maxLength" : 2200,
+                    "description" : "Comment text. Supports @mentions.",
+                    "example" : "Absolutely stunning photo!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Comment posted successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Comment"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "description" : "Comments are disabled for this post.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "error" : {
+                    "code" : "comments_disabled",
+                    "message" : "Comments are disabled for this post."
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/posts/{post_id}/comments/{comment_id}/replies" : {
+      "post" : {
+        "tags" : [ "Posts" ],
+        "summary" : "Reply to a comment",
+        "description" : "Posts a reply to an existing comment. Replies are nested one level deep.\nThe original commenter is notified.\n",
+        "operationId" : "replyToComment",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PostId"
+        }, {
+          "name" : "comment_id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "cmt_2xLp5kNr8Q"
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "text" ],
+                "properties" : {
+                  "text" : {
+                    "type" : "string",
+                    "maxLength" : 2200,
+                    "description" : "Reply text. Supports @mentions.",
+                    "example" : "@jane_doe That means a lot, thank you!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Reply posted successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Comment"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "description" : "Comments are disabled for this post.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                },
+                "example" : {
+                  "error" : {
+                    "code" : "comments_disabled",
+                    "message" : "Comments are disabled for this post."
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/users/suggestions" : {
+      "get" : {
+        "tags" : [ "Friend Suggestions" ],
+        "summary" : "Get friend suggestions for feed (preview)",
+        "operationId" : "getFeedSuggestions",
+        "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "default" : 5,
+            "maximum" : 10
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Suggestions returned successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionsPreviewResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/users/suggestions/all" : {
+      "get" : {
+        "tags" : [ "Friend Suggestions" ],
+        "summary" : "Get full paginated list of friend suggestions",
+        "operationId" : "getAllSuggestions",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "default" : 1
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "default" : 20,
+            "maximum" : 50
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Full suggestion list returned.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionsAllResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/users/suggestions/dismiss/{userId}" : {
+      "delete" : {
+        "tags" : [ "Friend Suggestions" ],
+        "summary" : "Dismiss a suggestion",
+        "operationId" : "dismissSuggestion",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/SuggestedUserId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Suggestion dismissed successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DismissResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/users/follow/{userId}" : {
+      "post" : {
+        "tags" : [ "Friend Suggestions" ],
+        "summary" : "Follow a suggested user",
+        "operationId" : "followUser",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/SuggestedUserId"
+        } ],
+        "responses" : {
+          "201" : {
+            "description" : "User followed successfully.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FollowResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "BearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    },
+    "parameters" : {
+      "FeedItemId" : {
+        "name" : "item_id",
+        "in" : "path",
+        "required" : true,
+        "schema" : {
+          "type" : "string"
+        },
+        "example" : "fi_1aJx7kPq2Z"
+      },
+      "PostId" : {
+        "name" : "post_id",
+        "in" : "path",
+        "required" : true,
+        "schema" : {
+          "type" : "string"
+        },
+        "example" : "pst_5bLm4nRt1X"
+      },
+      "SuggestedUserId" : {
+        "name" : "userId",
+        "in" : "path",
+        "required" : true,
+        "schema" : {
+          "type" : "string"
+        },
+        "example" : "u_84f2a1c"
+      }
+    },
+    "schemas" : {
+      "FeedResponse" : {
+        "type" : "object",
+        "properties" : {
+          "feed_id" : {
+            "type" : "string",
+            "example" : "feed_3xKp9nQw7Z"
+          },
+          "generated_at" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "is_cached" : {
+            "type" : "boolean"
+          },
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedItem"
+            }
+          },
+          "page" : {
+            "type" : "integer",
+            "example" : 1
+          },
+          "total_pages" : {
+            "type" : "integer",
+            "example" : 8
+          },
+          "has_more" : {
+            "type" : "boolean",
+            "example" : true
+          }
+        }
+      },
+      "FeedItem" : {
+        "type" : "object",
+        "properties" : {
+          "item_id" : {
+            "type" : "string",
+            "example" : "fi_1aJx7kPq2Z"
+          },
+          "item_type" : {
+            "type" : "string",
+            "enum" : [ "POST", "SUGGESTED_USER" ]
+          },
+          "source" : {
+            "type" : "string",
+            "enum" : [ "FOLLOWING", "RECOMMENDED" ]
+          },
+          "recommendation_reason" : {
+            "type" : "string",
+            "nullable" : true,
+            "example" : "Popular with people you follow"
+          },
+          "post" : {
+            "$ref" : "#/components/schemas/FeedPost"
+          },
+          "suggested_user" : {
+            "$ref" : "#/components/schemas/SuggestedUser"
+          }
+        }
+      },
+      "FeedPost" : {
+        "type" : "object",
+        "properties" : {
+          "post_id" : {
+            "type" : "string",
+            "example" : "pst_5bLm4nRt1X"
+          },
+          "author" : {
+            "type" : "object",
+            "properties" : {
+              "username" : {
+                "type" : "string",
+                "example" : "nature_art"
+              },
+              "avatar_url" : {
+                "type" : "string",
+                "example" : "https://cdn.instagram-clone.com/avatars/nature_art.jpg"
+              },
+              "is_following" : {
+                "type" : "boolean",
+                "example" : true
+              }
+            }
+          },
+          "media" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "media_type" : {
+                  "type" : "string",
+                  "enum" : [ "IMAGE", "VIDEO" ]
+                },
+                "url" : {
+                  "type" : "string"
+                },
+                "width" : {
+                  "type" : "integer"
+                },
+                "height" : {
+                  "type" : "integer"
+                }
+              }
+            }
+          },
+          "caption" : {
+            "type" : "string",
+            "nullable" : true,
+            "example" : "Therapy! #nature #art"
+          },
+          "like_count" : {
+            "type" : "integer",
+            "example" : 231
+          },
+          "comment_count" : {
+            "type" : "integer",
+            "example" : 14
+          },
+          "repost_count" : {
+            "type" : "integer",
+            "example" : 5
+          },
+          "is_liked" : {
+            "type" : "boolean",
+            "example" : false
+          },
+          "is_reposted" : {
+            "type" : "boolean",
+            "example" : false
+          },
+          "created_at" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "MediaUploadResponse" : {
+        "type" : "object",
+        "properties" : {
+          "media_id" : {
+            "type" : "string",
+            "example" : "med_7kTp3nRw9X"
+          },
+          "media_type" : {
+            "type" : "string",
+            "enum" : [ "IMAGE", "VIDEO" ]
+          },
+          "preview_url" : {
+            "type" : "string",
+            "format" : "uri",
+            "nullable" : true,
+            "example" : "https://cdn.instagram-clone.com/staged/med_7kTp3nRw9X.jpg"
+          },
+          "width" : {
+            "type" : "integer",
+            "example" : 1080
+          },
+          "height" : {
+            "type" : "integer",
+            "example" : 1080
+          }
+        }
+      },
+      "MediaItem" : {
+        "type" : "object",
+        "properties" : {
+          "media_id" : {
+            "type" : "string",
+            "example" : "med_7kTp3nRw9X"
+          },
+          "media_type" : {
+            "type" : "string",
+            "enum" : [ "IMAGE", "VIDEO" ]
+          },
+          "url" : {
+            "type" : "string",
+            "format" : "uri",
+            "example" : "https://cdn.instagram-clone.com/posts/med_7kTp3nRw9X.jpg"
+          }
+        }
+      },
+      "Post" : {
+        "type" : "object",
+        "properties" : {
+          "post_id" : {
+            "type" : "string",
+            "example" : "pst_5bLm4nRt1X"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PUBLISHED", "DRAFT" ],
+            "example" : "PUBLISHED"
+          },
+          "media" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MediaItem"
+            }
+          },
+          "caption" : {
+            "type" : "string",
+            "example" : "Golden hour #sunset #travel"
+          },
+          "like_count" : {
+            "type" : "integer",
+            "example" : 0
+          },
+          "comment_count" : {
+            "type" : "integer",
+            "example" : 0
+          },
+          "repost_count" : {
+            "type" : "integer",
+            "example" : 0
+          },
+          "disable_comments" : {
+            "type" : "boolean",
+            "example" : false
+          },
+          "permalink" : {
+            "type" : "string",
+            "format" : "uri",
+            "nullable" : true,
+            "example" : "https://www.instagram-clone.com/p/pst_5bLm4nRt1X"
+          },
+          "created_at" : {
+            "type" : "string",
+            "format" : "date-time",
+            "example" : "2024-06-15T14:32:00Z"
+          },
+          "updated_at" : {
+            "type" : "string",
+            "format" : "date-time",
+            "example" : "2024-06-15T14:32:00Z"
+          }
+        }
+      },
+      "LikeUser" : {
+        "type" : "object",
+        "properties" : {
+          "user_id" : {
+            "type" : "string",
+            "example" : "usr_3kTp9nRw1X"
+          },
+          "username" : {
+            "type" : "string",
+            "example" : "jane_doe"
+          },
+          "avatar_url" : {
+            "type" : "string",
+            "example" : "https://cdn.instagram-clone.com/avatars/jane_doe.jpg"
+          },
+          "is_following" : {
+            "type" : "boolean",
+            "example" : true
+          }
+        }
+      },
+      "Comment" : {
+        "type" : "object",
+        "properties" : {
+          "comment_id" : {
+            "type" : "string",
+            "example" : "cmt_2xLp5kNr8Q"
+          },
+          "author" : {
+            "type" : "object",
+            "properties" : {
+              "username" : {
+                "type" : "string",
+                "example" : "jane_doe"
+              },
+              "avatar_url" : {
+                "type" : "string",
+                "example" : "https://cdn.instagram-clone.com/avatars/jane_doe.jpg"
+              }
+            }
+          },
+          "text" : {
+            "type" : "string",
+            "example" : "Absolutely stunning photo!"
+          },
+          "reply_count" : {
+            "type" : "integer",
+            "example" : 2
+          },
+          "replies" : {
+            "type" : "array",
+            "description" : "Preview of top 2 replies.",
+            "items" : {
+              "$ref" : "#/components/schemas/Comment"
+            }
+          },
+          "created_at" : {
+            "type" : "string",
+            "format" : "date-time",
+            "example" : "2024-06-15T10:30:00Z"
+          }
+        }
+      },
+      "Error" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "type" : "object",
+            "properties" : {
+              "code" : {
+                "type" : "string"
+              },
+              "message" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      },
+      "SuggestedUser" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "example" : "u_84f2a1c"
+          },
+          "username" : {
+            "type" : "string",
+            "example" : "sarah_jones"
+          },
+          "fullName" : {
+            "type" : "string",
+            "example" : "Sarah Jones"
+          },
+          "avatarUrl" : {
+            "type" : "string",
+            "format" : "uri",
+            "example" : "https://cdn.instagram-clone.com/avatars/u_84f2a1c.jpg"
+          },
+          "mutualFriendsCount" : {
+            "type" : "integer",
+            "example" : 4
+          },
+          "isFollowing" : {
+            "type" : "boolean",
+            "example" : false
+          }
+        }
+      },
+      "Pagination" : {
+        "type" : "object",
+        "properties" : {
+          "currentPage" : {
+            "type" : "integer",
+            "example" : 1
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "example" : 3
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "example" : 58
+          },
+          "hasNextPage" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "hasPrevPage" : {
+            "type" : "boolean",
+            "example" : false
+          }
+        }
+      },
+      "SuggestionsPreviewResponse" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "example" : "success"
+          },
+          "data" : {
+            "type" : "object",
+            "properties" : {
+              "suggestions" : {
+                "type" : "array",
+                "items" : {
+                  "$ref" : "#/components/schemas/SuggestedUser"
+                }
+              },
+              "total" : {
+                "type" : "integer",
+                "example" : 38
+              },
+              "hasMore" : {
+                "type" : "boolean",
+                "example" : true
+              }
+            }
+          }
+        }
+      },
+      "SuggestionsAllResponse" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "example" : "success"
+          },
+          "data" : {
+            "type" : "object",
+            "properties" : {
+              "suggestions" : {
+                "type" : "array",
+                "items" : {
+                  "$ref" : "#/components/schemas/SuggestedUser"
+                }
+              },
+              "pagination" : {
+                "$ref" : "#/components/schemas/Pagination"
+              }
+            }
+          }
+        }
+      },
+      "FollowResponse" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "example" : "success"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "object",
+            "properties" : {
+              "followedUserId" : {
+                "type" : "string"
+              },
+              "isFollowing" : {
+                "type" : "boolean"
+              },
+              "followerCount" : {
+                "type" : "integer"
+              }
+            }
+          }
+        }
+      },
+      "DismissResponse" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "object",
+            "properties" : {
+              "dismissedUserId" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses" : {
+      "BadRequest" : {
+        "description" : "Invalid request or missing parameters.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "example" : {
+              "error" : {
+                "code" : "bad_request",
+                "message" : "Required field 'media_ids' is missing."
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "Missing or invalid token.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "example" : {
+              "error" : {
+                "code" : "unauthorized",
+                "message" : "Access token is missing or invalid."
+              }
+            }
+          }
+        }
+      },
+      "Forbidden" : {
+        "description" : "You do not have permission to perform this action.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "example" : {
+              "error" : {
+                "code" : "forbidden",
+                "message" : "You can only edit your own posts."
+              }
+            }
+          }
+        }
+      },
+      "NotFound" : {
+        "description" : "Resource not found.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            },
+            "example" : {
+              "error" : {
+                "code" : "not_found",
+                "message" : "Resource not found."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
